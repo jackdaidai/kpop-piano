@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>猎魔女团钢琴 🎹</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: #0a0518; font-family: "Segoe UI", "Microsoft YaHei", sans-serif; }
+  #c { position: fixed; inset: 0; touch-action: none; }
+
+  .overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10; pointer-events: none; }
+  .overlay > * { pointer-events: auto; }
+
+  #menu { background: radial-gradient(ellipse at 50% 30%, rgba(120,40,200,.35), rgba(10,5,24,.92)); }
+  #menu h1 {
+    font-size: clamp(28px, 6vw, 52px); color: #fff; letter-spacing: 2px; margin-bottom: 6px;
+    text-shadow: 0 0 18px #c44dff, 0 0 40px #7a1fd0;
+  }
+  #menu .sub { color: #cfa8ff; font-size: clamp(13px, 2.5vw, 17px); margin-bottom: 26px; text-shadow: 0 0 10px #7a1fd0; }
+
+  .modeRow { display: flex; gap: 10px; margin-bottom: 22px; }
+  .modeBtn {
+    padding: 10px 22px; border-radius: 24px; border: 2px solid #8a4dff; background: rgba(40,15,80,.6);
+    color: #d8c2ff; font-size: 16px; cursor: pointer; transition: all .15s;
+  }
+  .modeBtn.active { background: linear-gradient(135deg, #a02bff, #ff3fa4); color: #fff; border-color: #ff7ad2; box-shadow: 0 0 16px #c44dff; }
+
+  .songBtn {
+    width: min(78vw, 340px); margin: 6px 0; padding: 13px 20px; border-radius: 14px; cursor: pointer;
+    border: 1px solid rgba(200,140,255,.45); background: rgba(30,12,60,.72); color: #fff;
+    font-size: 17px; display: flex; justify-content: space-between; align-items: center; transition: all .15s;
+  }
+  .songBtn:hover { background: rgba(90,30,160,.8); box-shadow: 0 0 14px rgba(196,77,255,.6); transform: scale(1.03); }
+  .songBtn .en { color: #b98fff; font-size: 13px; }
+  .songBtn.free { border-style: dashed; color: #ffd66b; }
+
+  #hud { position: fixed; top: 0; left: 0; right: 0; z-index: 9; display: none; padding: 10px 14px; pointer-events: none; }
+  #hud .row { display: flex; align-items: center; gap: 12px; }
+  #backBtn {
+    pointer-events: auto; cursor: pointer; border: 1px solid rgba(200,140,255,.5); border-radius: 20px;
+    background: rgba(30,12,60,.75); color: #d8c2ff; padding: 7px 16px; font-size: 14px;
+  }
+  #songTitle { color: #fff; font-size: 16px; text-shadow: 0 0 10px #c44dff; flex: 1; text-align: center; }
+  #scoreBox { color: #ffd66b; font-size: 16px; min-width: 90px; text-align: right; text-shadow: 0 0 8px #ff9a3f; }
+  #progressWrap { margin-top: 8px; height: 8px; border-radius: 4px; background: rgba(255,255,255,.12); overflow: hidden; }
+  #progressBar { height: 100%; width: 0%; border-radius: 4px; background: linear-gradient(90deg, #a02bff, #ff3fa4, #ffd66b); transition: width .2s; }
+  #rhythmControls { display: none; align-items: center; justify-content: center; gap: 8px; margin-top: 9px; color: #d8c2ff; font-size: 13px; pointer-events: auto; }
+  #speedSlider { width: min(180px, 34vw); accent-color: #ff5fb8; cursor: pointer; }
+  #speedValue { min-width: 70px; color: #7dffea; font-weight: 700; }
+
+  #judge {
+    position: fixed; left: 50%; top: 34%; transform: translate(-50%,-50%) scale(1); z-index: 9;
+    font-size: 44px; font-weight: 800; opacity: 0; pointer-events: none; text-shadow: 0 0 20px currentColor;
+  }
+  #judge.pop { animation: judgePop .5s ease-out; }
+  @keyframes judgePop { 0% { opacity: 0; transform: translate(-50%,-50%) scale(.5);} 25% { opacity: 1; transform: translate(-50%,-50%) scale(1.15);} 100% { opacity: 0; transform: translate(-50%,-70%) scale(1);} }
+
+  #combo { position: fixed; left: 50%; top: 44%; transform: translateX(-50%); z-index: 9; color: #7dffea; font-size: 22px; font-weight: 700; opacity: 0; pointer-events: none; text-shadow: 0 0 12px #00d2b0; }
+
+  #countdown { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 11; pointer-events: none; color: #fff; font-size: 110px; font-weight: 800; text-shadow: 0 0 40px #c44dff; }
+
+  #finish { display: none; background: rgba(10,5,24,.82); z-index: 12; }
+  #finish .stars { font-size: 64px; letter-spacing: 8px; margin-bottom: 12px; }
+  #finish .stars span { display: inline-block; opacity: 0; transform: scale(0); animation: starIn .5s forwards; }
+  #finish .stars span:nth-child(2) { animation-delay: .3s; }
+  #finish .stars span:nth-child(3) { animation-delay: .6s; }
+  @keyframes starIn { 60% { transform: scale(1.4); opacity: 1; } 100% { transform: scale(1); opacity: 1; } }
+  #finish h2 { color: #fff; font-size: 32px; margin-bottom: 8px; text-shadow: 0 0 16px #c44dff; }
+  #finish .detail { color: #cfa8ff; font-size: 17px; margin-bottom: 24px; }
+  #finish .btns { display: flex; gap: 12px; }
+  #finish button { padding: 12px 26px; border-radius: 24px; border: none; font-size: 17px; cursor: pointer; }
+  #againBtn { background: linear-gradient(135deg, #a02bff, #ff3fa4); color: #fff; box-shadow: 0 0 16px #c44dff; }
+  #menuBtn2 { background: rgba(60,25,110,.9); color: #d8c2ff; border: 1px solid #8a4dff !important; }
+
+  #hint { position: fixed; bottom: 12px; left: 0; right: 0; text-align: center; color: rgba(216,194,255,.75); font-size: 14px; z-index: 8; pointer-events: none; text-shadow: 0 1px 4px #000; display: none; }
+
+  /* 学习卡：让孩子不用猜该按哪一颗琴键 */
+  #lessonCard {
+    position: fixed; left: 16px; top: 74px; z-index: 9; display: none; min-width: 184px;
+    padding: 12px 13px; border: 1px solid rgba(125,255,234,.5); border-radius: 16px;
+    background: rgba(21,11,48,.82); box-shadow: 0 0 24px rgba(53,200,255,.18); color: #fff;
+    backdrop-filter: blur(8px);
+  }
+  #lessonCard .tiny { color: #aa9bd0; font-size: 12px; letter-spacing: .7px; }
+  #nextNote { margin: 4px 0 9px; color: #7dffea; font-size: 25px; font-weight: 800; text-shadow: 0 0 12px #00d2b0; }
+  #demoBtn { width: 100%; padding: 7px 10px; border: 1px solid #8a4dff; border-radius: 18px; background: rgba(112,46,194,.55); color: #fff; cursor: pointer; font-size: 13px; }
+  #demoBtn:disabled { opacity: .55; cursor: wait; }
+  @media (max-width: 560px) { #lessonCard { left: 10px; top: 66px; min-width: 148px; padding: 9px 10px; } #nextNote { font-size: 20px; } }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="menu" class="overlay">
+  <h1>🎹 猎魔女团钢琴</h1>
+  <div class="sub">KPop Demon Hunters · 弹出你最爱的歌</div>
+  <div class="modeRow">
+    <button class="modeBtn active" data-mode="learn">🌱 学习模式</button>
+    <button class="modeBtn" data-mode="rhythm">⚡ 节奏模式</button>
+  </div>
+  <div id="songList"></div>
+  <button class="songBtn free" data-song="-1"><span>🎵 自由弹奏</span><span class="en">Free Play</span></button>
+</div>
+
+<div id="hud">
+  <div class="row">
+    <button id="backBtn">← 返回</button>
+    <div id="songTitle"></div>
+    <div id="scoreBox"></div>
+  </div>
+  <div id="progressWrap"><div id="progressBar"></div></div>
+  <div id="rhythmControls">
+    <span>🐢 下降速度</span>
+    <input id="speedSlider" type="range" min="0.7" max="1.6" step="0.1" value="1">
+    <span id="speedValue">标准</span><span>🐇</span>
+  </div>
+</div>
+
+<div id="judge"></div>
+<div id="combo"></div>
+<div id="countdown"></div>
+<div id="hint"></div>
+<div id="lessonCard">
+  <div class="tiny">下一颗琴键</div>
+  <div id="nextNote">—</div>
+  <button id="demoBtn">🔊 听示范（前 8 音）</button>
+</div>
+
+<div id="finish" class="overlay">
+  <div class="stars"><span>⭐</span><span>⭐</span><span>⭐</span></div>
+  <h2>太棒了！</h2>
+  <div class="detail" id="finishDetail"></div>
+  <div class="btns">
+    <button id="againBtn">再弹一次</button>
+    <button id="menuBtn2">选别的歌</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
+<script>
+'use strict';
+/* ================= 音符与频率 ================= */
+const NOTE_NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+const SOLFEGE = { C: 'Do', 'C#': 'Do♯', D: 'Re', 'D#': 'Re♯', E: 'Mi', F: 'Fa', 'F#': 'Fa♯', G: 'Sol', 'G#': 'Sol♯', A: 'La', 'A#': 'La♯', B: 'Si' };
+// 从 C4 开始的两组琴键。孩子也可以不碰鼠标，直接按这些按键。
+const COMPUTER_KEYS = ['A','W','S','E','D','F','T','G','Y','H','U','J','K','O','L','P','Q','2','3','4','5','6','7','8'];
+function noteToMidi(n) { // "C4" / "F#5"
+  const m = n.match(/^([A-G]#?)(\d)$/);
+  return NOTE_NAMES.indexOf(m[1]) + (parseInt(m[2]) + 1) * 12;
+}
+function midiToFreq(midi) { return 440 * Math.pow(2, (midi - 69) / 12); }
+
+/* ================= 曲库（儿童简化版单音旋律，纯白键） =================
+   格式: [音名, 拍数] */
+const SONGS = [
+  {
+    name: '金光闪闪', en: 'Golden', bpm: 100,
+    notes: [
+      ['E4',.5],['G4',.5],['A4',1],['A4',.5],['G4',.5],['E4',1],
+      ['E4',.5],['G4',.5],['A4',1],['C5',.5],['B4',.5],['A4',1],
+      ['G4',.5],['A4',.5],['B4',1],['B4',.5],['A4',.5],['G4',1],
+      ['A4',.5],['B4',.5],['C5',1.5],['B4',.5],['A4',2],
+      ['C5',.5],['C5',.5],['D5',1],['E5',1.5],['D5',.5],
+      ['C5',.5],['D5',.5],['E5',2],
+      ['G5',1],['E5',1],['D5',.5],['C5',.5],['D5',1],
+      ['C5',3]
+    ]
+  },
+  {
+    name: '汽水泡泡', en: 'Soda Pop', bpm: 112,
+    notes: [
+      ['G4',.5],['E4',.5],['G4',.5],['E4',.5],['G4',.5],['A4',.5],['G4',1],
+      ['E4',.5],['G4',.5],['A4',.5],['G4',.5],['E4',1],['D4',1],
+      ['G4',.5],['E4',.5],['G4',.5],['E4',.5],['G4',.5],['A4',.5],['G4',1],
+      ['A4',.5],['B4',.5],['C5',1],['B4',.5],['A4',.5],['G4',1],
+      ['C5',.5],['C5',.5],['B4',.5],['A4',.5],['G4',1],['E4',1],
+      ['D4',.5],['E4',.5],['G4',1],['E4',.5],['D4',.5],['C4',2]
+    ]
+  },
+  {
+    name: '看我的', en: "How It's Done", bpm: 104,
+    notes: [
+      ['A4',.5],['A4',.5],['C5',.5],['A4',.5],['G4',.5],['A4',1.5],
+      ['A4',.5],['C5',.5],['D5',.5],['C5',.5],['A4',.5],['G4',1.5],
+      ['E4',.5],['G4',.5],['A4',.5],['A4',.5],['G4',.5],['E4',1.5],
+      ['G4',.5],['A4',.5],['C5',1],['A4',1],['G4',1],
+      ['A4',.5],['A4',.5],['C5',.5],['D5',.5],['E5',1.5],['D5',.5],
+      ['C5',.5],['D5',.5],['C5',.5],['A4',.5],['A4',2]
+    ]
+  },
+  {
+    name: '你的偶像', en: 'Your Idol', bpm: 92,
+    notes: [
+      ['E4',1],['E4',.5],['G4',.5],['E4',1],['D4',1],
+      ['C4',.5],['D4',.5],['E4',1.5],['E4',.5],['E4',1],
+      ['G4',1],['G4',.5],['A4',.5],['G4',1],['E4',1],
+      ['D4',.5],['E4',.5],['D4',1],['C4',2],
+      ['A4',1],['A4',.5],['B4',.5],['C5',1],['B4',1],
+      ['A4',.5],['G4',.5],['A4',1.5],['E4',.5],['E4',1],
+      ['G4',.5],['A4',.5],['G4',.5],['E4',.5],['D4',1],['E4',2]
+    ]
+  },
+  {
+    name: '终结', en: 'Takedown', bpm: 98,
+    notes: [
+      ['A4',.5],['C5',.5],['D5',1],['C5',.5],['A4',.5],['G4',1],
+      ['A4',.5],['C5',.5],['D5',.5],['E5',.5],['D5',1],['C5',1],
+      ['G4',.5],['A4',.5],['C5',1],['A4',.5],['G4',.5],['E4',1],
+      ['D4',.5],['E4',.5],['G4',1],['A4',1],['G4',2]
+    ]
+  },
+  {
+    name: '自由', en: 'Free', bpm: 76,
+    notes: [
+      ['E4',1],['G4',.5],['A4',.5],['B4',1],['A4',1],
+      ['G4',.5],['E4',.5],['D4',1],['E4',1],['G4',1],
+      ['A4',.5],['B4',.5],['C5',1],['B4',.5],['A4',.5],['G4',1],
+      ['E4',.5],['D4',.5],['E4',1],['G4',1],['C5',2]
+    ]
+  },
+  {
+    name: '这就是声音', en: 'What It Sounds Like', bpm: 94,
+    notes: [
+      ['C5',.5],['D5',.5],['E5',1],['D5',.5],['C5',.5],['A4',1],
+      ['G4',.5],['A4',.5],['C5',1],['D5',1],['E5',1],
+      ['E5',.5],['D5',.5],['C5',1],['A4',.5],['G4',.5],['A4',1],
+      ['C5',.5],['D5',.5],['E5',1],['D5',1],['C5',2]
+    ]
+  },
+  {
+    name: '终结', en: 'Takedown · TWICE Ver.', bpm: 102,
+    notes: [
+      ['A4',.5],['A4',.5],['C5',1],['D5',.5],['C5',.5],['A4',1],
+      ['G4',.5],['A4',.5],['C5',.5],['D5',.5],['E5',1],['D5',1],
+      ['C5',.5],['A4',.5],['G4',1],['E4',.5],['G4',.5],['A4',1],
+      ['C5',.5],['D5',.5],['C5',1],['A4',1],['G4',2]
+    ]
+  }
+];
+
+/* ================= Web Audio 合成钢琴 ================= */
+let audioCtx = null, masterGain = null;
+function initAudio() {
+  if (audioCtx) { if (audioCtx.state === 'suspended') audioCtx.resume(); return; }
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = audioCtx.createGain();
+  masterGain.gain.value = 0.5;
+  const comp = audioCtx.createDynamicsCompressor();
+  masterGain.connect(comp);
+  comp.connect(audioCtx.destination);
+}
+function playNote(midi, vel) {
+  if (!audioCtx) return;
+  vel = vel === undefined ? 1 : vel;
+  const t = audioCtx.currentTime;
+  const freq = midiToFreq(midi);
+  const g = audioCtx.createGain();
+  g.connect(masterGain);
+  const dur = 1.8;
+  g.gain.setValueAtTime(0, t);
+  g.gain.linearRampToValueAtTime(0.35 * vel, t + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  // 谐波叠加模拟钢琴
+  const partials = [[1, 1], [2, 0.45], [3, 0.22], [4, 0.09], [5, 0.05]];
+  const oscs = [];
+  for (let i = 0; i < partials.length; i++) {
+    const [mult, amp] = partials[i];
+    const o = audioCtx.createOscillator();
+    o.type = 'sine';
+    o.frequency.value = freq * mult;
+    const og = audioCtx.createGain();
+    og.gain.setValueAtTime(amp, t);
+    // 高次谐波衰减更快
+    og.gain.exponentialRampToValueAtTime(0.0001, t + dur / (1 + i * 0.6));
+    o.connect(og); og.connect(g);
+    o.start(t); o.stop(t + dur + 0.1);
+    oscs.push(o);
+  }
+  // 击弦瞬态
+  const click = audioCtx.createOscillator();
+  click.type = 'triangle';
+  click.frequency.value = freq * 6;
+  const cg = audioCtx.createGain();
+  cg.gain.setValueAtTime(0.08 * vel, t);
+  cg.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+  click.connect(cg); cg.connect(g);
+  click.start(t); click.stop(t + 0.1);
+}
+
+/* ================= three.js 场景 ================= */
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0518);
+scene.fog = new THREE.Fog(0x0a0518, 30, 80);
+
+const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 200);
+camera.position.set(0, 9.5, 12.5);
+camera.lookAt(0, 0.5, -2);
+
+scene.add(new THREE.AmbientLight(0x584080, 0.9));
+const keyLight = new THREE.DirectionalLight(0xffffff, 0.85);
+keyLight.position.set(4, 12, 8);
+scene.add(keyLight);
+const magenta = new THREE.PointLight(0xff3fa4, 1.2, 50);
+magenta.position.set(-10, 8, -6);
+scene.add(magenta);
+const cyan = new THREE.PointLight(0x35c8ff, 1.0, 50);
+cyan.position.set(10, 8, -6);
+scene.add(cyan);
+
+// 舞台地面
+const floor = new THREE.Mesh(
+  new THREE.PlaneGeometry(120, 120),
+  new THREE.MeshStandardMaterial({ color: 0x140a2e, roughness: 0.85, metalness: 0.3 })
+);
+floor.rotation.x = -Math.PI / 2;
+floor.position.y = -0.6;
+scene.add(floor);
+
+// 背景霓虹光柱
+for (let i = 0; i < 8; i++) {
+  const h = 12 + Math.random() * 10;
+  const beam = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.12, 0.3, h, 8),
+    new THREE.MeshBasicMaterial({ color: i % 2 ? 0xc44dff : 0x35c8ff, transparent: true, opacity: 0.35 })
+  );
+  beam.position.set(-21 + i * 6, h / 2 - 0.6, -26 - Math.random() * 8);
+  scene.add(beam);
+}
+
+// 漂浮粒子
+const P_COUNT = 260;
+const pGeo = new THREE.BufferGeometry();
+const pPos = new Float32Array(P_COUNT * 3);
+for (let i = 0; i < P_COUNT; i++) {
+  pPos[i * 3] = (Math.random() - 0.5) * 60;
+  pPos[i * 3 + 1] = Math.random() * 22;
+  pPos[i * 3 + 2] = -Math.random() * 45 + 5;
+}
+pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+const particles = new THREE.Points(pGeo, new THREE.PointsMaterial({ color: 0xd8a5ff, size: 0.14, transparent: true, opacity: 0.75 }));
+scene.add(particles);
+
+/* ================= 钢琴键盘 C4–B5 ================= */
+const WHITE_W = 1.06, WHITE_D = 5.4, WHITE_H = 0.5;
+const BLACK_W = 0.6, BLACK_D = 3.3, BLACK_H = 0.55;
+const keys = [];            // {mesh, midi, isBlack, baseY, baseColor, mat}
+const keyByMidi = {};
+const WHITE_SEMIS = [0, 2, 4, 5, 7, 9, 11];
+const BLACK_SEMIS = [1, 3, 6, 8, 10];
+const N_WHITE = 14;
+const startMidi = noteToMidi('C4');
+const kbX0 = -(N_WHITE - 1) * WHITE_W / 2;
+
+const pianoGroup = new THREE.Group();
+scene.add(pianoGroup);
+
+// 琴体底座
+const base = new THREE.Mesh(
+  new THREE.BoxGeometry(N_WHITE * WHITE_W + 1.2, 0.7, WHITE_D + 1.2),
+  new THREE.MeshStandardMaterial({ color: 0x1c0f38, roughness: 0.4, metalness: 0.6 })
+);
+base.position.set(0, -0.35, 0);
+pianoGroup.add(base);
+
+let whiteIdx = 0;
+for (let oct = 0; oct < 2; oct++) {
+  for (let s = 0; s < 12; s++) {
+    const midi = startMidi + oct * 12 + s;
+    const isBlack = BLACK_SEMIS.indexOf(s) !== -1;
+    if (!isBlack) {
+      const mat = new THREE.MeshStandardMaterial({ color: 0xf5f0ff, roughness: 0.35, emissive: 0x000000 });
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(WHITE_W - 0.08, WHITE_H, WHITE_D), mat);
+      mesh.position.set(kbX0 + whiteIdx * WHITE_W, WHITE_H / 2, 0);
+      pianoGroup.add(mesh);
+      const k = { mesh, mat, midi, isBlack: false, baseY: mesh.position.y, baseColor: 0xf5f0ff, pressT: 0 };
+      mesh.userData.key = k;
+      keys.push(k); keyByMidi[midi] = k;
+      whiteIdx++;
+    } else {
+      const mat = new THREE.MeshStandardMaterial({ color: 0x14101e, roughness: 0.3, emissive: 0x000000 });
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(BLACK_W, BLACK_H, BLACK_D), mat);
+      // 黑键位于前一个白键与下一个白键之间
+      mesh.position.set(kbX0 + (whiteIdx - 0.5) * WHITE_W, WHITE_H + BLACK_H / 2 - 0.12, -(WHITE_D - BLACK_D) / 2);
+      pianoGroup.add(mesh);
+      const k = { mesh, mat, midi, isBlack: true, baseY: mesh.position.y, baseColor: 0x14101e, pressT: 0 };
+      mesh.userData.key = k;
+      keys.push(k); keyByMidi[midi] = k;
+    }
+  }
+}
+
+// 提示箭头（学习模式）
+const arrow = new THREE.Group();
+const cone = new THREE.Mesh(
+  new THREE.ConeGeometry(0.32, 0.7, 12),
+  new THREE.MeshBasicMaterial({ color: 0x4dff88 })
+);
+cone.rotation.x = Math.PI;
+arrow.add(cone);
+arrow.visible = false;
+scene.add(arrow);
+
+/* ================= 游戏状态 ================= */
+const MODE_LEARN = 'learn', MODE_RHYTHM = 'rhythm';
+let mode = MODE_LEARN;
+let state = 'menu';         // menu | learn | rhythm | free | finish
+let song = null;
+let learnIdx = 0;
+let score = 0, combo = 0, maxCombo = 0, hitCount = { perfect: 0, good: 0, miss: 0 };
+let demoTimers = [];
+
+// 节奏模式
+const FALL_DURATION_BASE = 4.5; // 标准速度下的落键秒数
+const RHYTHM_TEMPO = 0.6;   // 节奏模式速度倍率（儿童友好，<1 更慢）
+const HIT_PERFECT = 0.3, HIT_GOOD = 0.65;
+let fallSpeed = 1;
+let songStart = 0;          // audioCtx 时间基准
+let rhythmNotes = [];       // {midi, time, mesh, hit, judged}
+const noteMeshes = new THREE.Group();
+scene.add(noteMeshes);
+
+const $ = id => document.getElementById(id);
+const menuEl = $('menu'), hudEl = $('hud'), judgeEl = $('judge'), comboEl = $('combo'),
+      countdownEl = $('countdown'), finishEl = $('finish'), hintEl = $('hint');
+const lessonCardEl = $('lessonCard'), nextNoteEl = $('nextNote'), demoBtn = $('demoBtn');
+const rhythmControlsEl = $('rhythmControls'), speedSlider = $('speedSlider'), speedValue = $('speedValue');
+
+function fallDuration() { return FALL_DURATION_BASE / fallSpeed; }
+function updateSpeedLabel() {
+  const label = fallSpeed < 0.9 ? '慢慢来' : fallSpeed > 1.25 ? '挑战' : '标准';
+  speedValue.textContent = label + ' ' + fallSpeed.toFixed(1) + '×';
+}
+speedSlider.addEventListener('input', () => { fallSpeed = Number(speedSlider.value); updateSpeedLabel(); });
+updateSpeedLabel();
+
+/* ---------- 菜单 ---------- */
+const songListEl = $('songList');
+SONGS.forEach((s, i) => {
+  const b = document.createElement('button');
+  b.className = 'songBtn';
+  b.innerHTML = '<span>🎶 ' + s.name + '</span><span class="en">' + s.en + '</span>';
+  b.addEventListener('click', () => startSong(i));
+  songListEl.appendChild(b);
+});
+document.querySelectorAll('.modeBtn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.modeBtn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    mode = b.dataset.mode;
+  });
+});
+document.querySelector('.songBtn.free').addEventListener('click', () => {
+  initAudio();
+  song = null;
+  state = 'free';
+  menuEl.style.display = 'none';
+  hudEl.style.display = 'block';
+  $('songTitle').textContent = '🎵 自由弹奏';
+  $('scoreBox').textContent = '';
+  $('progressBar').style.width = '0%';
+  lessonCardEl.style.display = 'none';
+  rhythmControlsEl.style.display = 'none';
+  hintEl.textContent = '随便弹，每个键都会唱歌 ♪';
+  hintEl.style.display = 'block';
+});
+$('backBtn').addEventListener('click', toMenu);
+$('menuBtn2').addEventListener('click', toMenu);
+$('againBtn').addEventListener('click', () => { const i = SONGS.indexOf(song); toMenu(); startSong(i); });
+
+function toMenu() {
+  state = 'menu';
+  song = null;
+  clearRhythm();
+  stopDemo();
+  arrow.visible = false;
+  clearHighlights();
+  menuEl.style.display = 'flex';
+  hudEl.style.display = 'none';
+  finishEl.style.display = 'none';
+  hintEl.style.display = 'none';
+  lessonCardEl.style.display = 'none';
+  rhythmControlsEl.style.display = 'none';
+  countdownEl.style.display = 'none';
+}
+
+function startSong(i) {
+  initAudio();
+  song = SONGS[i];
+  score = 0; combo = 0; maxCombo = 0;
+  hitCount = { perfect: 0, good: 0, miss: 0 };
+  learnIdx = 0;
+  clearRhythm();
+  menuEl.style.display = 'none';
+  finishEl.style.display = 'none';
+  hudEl.style.display = 'block';
+  $('songTitle').textContent = (mode === MODE_LEARN ? '🌱 ' : '⚡ ') + song.name + ' · ' + song.en;
+  $('progressBar').style.width = '0%';
+  if (mode === MODE_LEARN) {
+    state = 'learn';
+    $('scoreBox').textContent = '';
+    hintEl.textContent = '弹发光的绿色琴键 ✨ 不着急，弹对才走下一个';
+    hintEl.style.display = 'block';
+    lessonCardEl.style.display = 'block';
+    rhythmControlsEl.style.display = 'none';
+    updateLearnTarget();
+  } else {
+    state = 'rhythm';
+    $('scoreBox').textContent = '0 分';
+    hintEl.textContent = '音符落到琴键上时按下去！可以调节下降速度。';
+    hintEl.style.display = 'block';
+    rhythmControlsEl.style.display = 'flex';
+    startCountdown();
+  }
+}
+
+function stopDemo() {
+  demoTimers.forEach(clearTimeout);
+  demoTimers = [];
+  demoBtn.disabled = false;
+  demoBtn.textContent = '🔊 听示范（前 8 音）';
+}
+
+function playDemo() {
+  if (state !== 'learn' || !song || demoTimers.length) return;
+  demoBtn.disabled = true;
+  demoBtn.textContent = '♪ 正在示范…';
+  const beat = 60 / song.bpm;
+  let delay = 0;
+  song.notes.slice(learnIdx, learnIdx + 8).forEach(([name, duration]) => {
+    const timer = setTimeout(() => {
+      const k = keyByMidi[noteToMidi(name)];
+      if (k) pressKey(k, false);
+    }, delay * 1000);
+    demoTimers.push(timer);
+    delay += duration * beat;
+  });
+  demoTimers.push(setTimeout(stopDemo, delay * 1000 + 150));
+}
+demoBtn.addEventListener('click', () => { initAudio(); playDemo(); });
+
+/* ---------- 学习模式 ---------- */
+let learnTargetKey = null;
+function updateLearnTarget() {
+  clearHighlights();
+  if (learnIdx >= song.notes.length) { finishSong(); return; }
+  const midi = noteToMidi(song.notes[learnIdx][0]);
+  const k = keyByMidi[midi];
+  learnTargetKey = k;
+  const noteName = song.notes[learnIdx][0];
+  const pitch = noteName.match(/^([A-G]#?)(\d)$/);
+  const keyboardKey = COMPUTER_KEYS[midi - startMidi] || '';
+  nextNoteEl.textContent = noteName + ' · ' + SOLFEGE[pitch[1]] + '   [' + keyboardKey + ']';
+  k.mat.emissive.setHex(0x1fae4a);
+  k.mat.color.setHex(k.isBlack ? 0x0f4d2a : 0x9dffc4);
+  arrow.visible = true;
+  arrow.position.set(k.mesh.position.x, 0, k.mesh.position.z + (k.isBlack ? -0.4 : 1.4));
+  $('progressBar').style.width = (learnIdx / song.notes.length * 100) + '%';
+}
+function clearHighlights() {
+  learnTargetKey = null;
+  for (let i = 0; i < keys.length; i++) {
+    keys[i].mat.emissive.setHex(0x000000);
+    keys[i].mat.emissiveIntensity = 1;
+    keys[i].mat.color.setHex(keys[i].baseColor);
+  }
+}
+
+/* ---------- 节奏模式 ---------- */
+function startCountdown() {
+  let n = 3;
+  countdownEl.style.display = 'flex';
+  countdownEl.textContent = n;
+  const iv = setInterval(() => {
+    n--;
+    if (n > 0) { countdownEl.textContent = n; }
+    else {
+      clearInterval(iv);
+      countdownEl.style.display = 'none';
+      spawnRhythmNotes();
+    }
+  }, 800);
+}
+function spawnRhythmNotes() {
+  const beat = 60 / (song.bpm * RHYTHM_TEMPO);
+  let t = fallDuration();
+  rhythmNotes = [];
+  for (let i = 0; i < song.notes.length; i++) {
+    const [nm, d] = song.notes[i];
+    const midi = noteToMidi(nm);
+    const k = keyByMidi[midi];
+    const mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(k.isBlack ? BLACK_W : WHITE_W - 0.15, 0.28, 0.9),
+      new THREE.MeshStandardMaterial({ color: k.isBlack ? 0x35c8ff : 0xff5fb8, emissive: k.isBlack ? 0x0a4a66 : 0x66184a, roughness: 0.4 })
+    );
+    mesh.position.set(k.mesh.position.x, 999, 0);
+    noteMeshes.add(mesh);
+    rhythmNotes.push({ midi, time: t, mesh, judged: false });
+    t += d * beat;
+  }
+  songStart = audioCtx.currentTime;
+}
+function clearRhythm() {
+  for (let i = 0; i < rhythmNotes.length; i++) noteMeshes.remove(rhythmNotes[i].mesh);
+  rhythmNotes = [];
+}
+function showJudge(txt, color) {
+  judgeEl.textContent = txt;
+  judgeEl.style.color = color;
+  judgeEl.classList.remove('pop');
+  void judgeEl.offsetWidth;
+  judgeEl.classList.add('pop');
+}
+function updateCombo() {
+  if (combo >= 3) {
+    comboEl.textContent = combo + ' 连击!';
+    comboEl.style.opacity = 1;
+  } else comboEl.style.opacity = 0;
+}
+function judgeHit(midi) {
+  const now = audioCtx.currentTime - songStart;
+  let best = null, bestDt = 1e9;
+  for (let i = 0; i < rhythmNotes.length; i++) {
+    const n = rhythmNotes[i];
+    if (n.judged || n.midi !== midi) continue;
+    const dt = Math.abs(n.time - now);
+    if (dt < bestDt) { bestDt = dt; best = n; }
+  }
+  if (best && bestDt <= HIT_GOOD) {
+    best.judged = true;
+    noteMeshes.remove(best.mesh);
+    if (bestDt <= HIT_PERFECT) { score += 100; combo++; hitCount.perfect++; showJudge('完美!', '#ffd66b'); }
+    else { score += 60; combo++; hitCount.good++; showJudge('不错!', '#7dffea'); }
+    maxCombo = Math.max(maxCombo, combo);
+    $('scoreBox').textContent = score + ' 分';
+    updateCombo();
+    return true;
+  }
+  return false;
+}
+
+/* ---------- 结束 ---------- */
+function finishSong() {
+  state = 'finish';
+  arrow.visible = false;
+  clearHighlights();
+  hintEl.style.display = 'none';
+  lessonCardEl.style.display = 'none';
+  stopDemo();
+  const starsEl = finishEl.querySelector('.stars');
+  if (mode === MODE_LEARN || song === null) {
+    starsEl.innerHTML = '<span>⭐</span><span>⭐</span><span>⭐</span>';
+    $('finishDetail').textContent = '《' + song.name + '》全部弹完啦！';
+  } else {
+    const total = song.notes.length;
+    const rate = (hitCount.perfect + hitCount.good) / total;
+    const nStars = rate >= 0.9 ? 3 : rate >= 0.6 ? 2 : 1;
+    let html = '';
+    for (let i = 0; i < 3; i++) html += '<span>' + (i < nStars ? '⭐' : '☆') + '</span>';
+    starsEl.innerHTML = html;
+    $('finishDetail').textContent = score + ' 分 · 完美 ' + hitCount.perfect + ' · 不错 ' + hitCount.good + ' · 错过 ' + hitCount.miss + ' · 最高连击 ' + maxCombo;
+  }
+  // 重新触发星星动画
+  const spans = starsEl.querySelectorAll('span');
+  spans.forEach(s => { s.style.animation = 'none'; void s.offsetWidth; s.style.animation = ''; });
+  finishEl.style.display = 'flex';
+}
+
+/* ================= 输入：raycaster 点击/触屏 ================= */
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+const keyMeshes = keys.map(k => k.mesh);
+
+function pressKey(k, fromUser) {
+  k.pressT = 1;
+  playNote(k.midi);
+  if (!fromUser) return;
+  if (state === 'learn') {
+    const want = noteToMidi(song.notes[learnIdx][0]);
+    if (k.midi === want) {
+      learnIdx++;
+      // 短暂金色闪光
+      k.mat.emissive.setHex(0xd4a017);
+      if (learnIdx >= song.notes.length) $('progressBar').style.width = '100%';
+      setTimeout(() => { if (state === 'learn') updateLearnTarget(); else clearHighlights(); }, 300);
+    } else {
+      k.mat.emissive.setHex(0xaa1122);
+      setTimeout(() => { k.mat.emissive.setHex(0x000000); if (state === 'learn') updateLearnTarget(); }, 250);
+    }
+  } else if (state === 'rhythm') {
+    judgeHit(k.midi);
+  }
+}
+
+canvas.addEventListener('pointerdown', e => {
+  initAudio();
+  if (state === 'menu' || state === 'finish') return;
+  pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(e.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(keyMeshes);
+  if (hits.length) pressKey(hits[0].object.userData.key, true);
+});
+
+window.addEventListener('keydown', e => {
+  if (e.repeat || state === 'menu' || state === 'finish') return;
+  const keyIndex = COMPUTER_KEYS.indexOf(e.key.toUpperCase());
+  if (keyIndex < 0) return;
+  initAudio();
+  const pianoKey = keyByMidi[startMidi + keyIndex];
+  if (pianoKey) pressKey(pianoKey, true);
+});
+
+/* ================= 主循环 ================= */
+const clock = new THREE.Clock();
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = clock.getDelta();
+  const t = clock.elapsedTime;
+
+  // 按键下沉回弹
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
+    if (k.pressT > 0) {
+      k.pressT = Math.max(0, k.pressT - dt * 6);
+      k.mesh.position.y = k.baseY - 0.14 * Math.sin(k.pressT * Math.PI);
+    }
+  }
+
+  // 箭头浮动 + 提示键呼吸脉冲
+  if (arrow.visible) arrow.position.y = 1.5 + Math.sin(t * 5) * 0.18;
+  if (learnTargetKey && learnTargetKey.mat.emissive.getHex() === 0x1fae4a) {
+    learnTargetKey.mat.emissiveIntensity = 0.7 + Math.sin(t * 6) * 0.45;
+  }
+
+  // 粒子缓慢上升
+  const pp = particles.geometry.attributes.position.array;
+  for (let i = 0; i < P_COUNT; i++) {
+    pp[i * 3 + 1] += dt * 0.35;
+    if (pp[i * 3 + 1] > 22) pp[i * 3 + 1] = 0;
+  }
+  particles.geometry.attributes.position.needsUpdate = true;
+
+  // 灯光呼吸
+  magenta.intensity = 1.1 + Math.sin(t * 1.7) * 0.4;
+  cyan.intensity = 1.0 + Math.cos(t * 1.3) * 0.35;
+
+  // 节奏模式音符移动
+  if (state === 'rhythm' && rhythmNotes.length && songStart) {
+    const now = audioCtx.currentTime - songStart;
+    let allDone = true;
+    for (let i = 0; i < rhythmNotes.length; i++) {
+      const n = rhythmNotes[i];
+      if (!n.judged) allDone = false;
+      if (n.judged) continue;
+      const remain = n.time - now;                 // 秒，>0 还没到
+      const fallTime = fallDuration();
+      if (remain > fallTime) { n.mesh.position.y = 999; continue; }
+      const k = keyByMidi[n.midi];
+      const prog = 1 - remain / fallTime;          // 0 出现 → 1 到达琴键
+      // 从远高处沿斜线落到琴键顶面
+      n.mesh.position.x = k.mesh.position.x;
+      n.mesh.position.y = 10 - prog * (10 - (k.baseY + 0.5));
+      n.mesh.position.z = -22 + prog * (22 + k.mesh.position.z);
+      // 快到时目标键发光提示
+      if (remain < 0.8 && remain > -HIT_GOOD) k.mat.emissive.setHex(k.isBlack ? 0x0a4a66 : 0x66184a);
+      // 错过
+      if (remain < -HIT_GOOD) {
+        n.judged = true;
+        noteMeshes.remove(n.mesh);
+        combo = 0; hitCount.miss++;
+        updateCombo();
+        showJudge('错过', '#8b8b9e');
+        k.mat.emissive.setHex(0x000000);
+      }
+    }
+    // 键光衰减：没有临近音符的键熄灭
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
+      let near = false;
+      for (let j = 0; j < rhythmNotes.length; j++) {
+        const n = rhythmNotes[j];
+        if (!n.judged && n.midi === k.midi && n.time - now < 0.8 && n.time - now > -HIT_GOOD) { near = true; break; }
+      }
+      if (!near) k.mat.emissive.setHex(0x000000);
+    }
+    const lastT = rhythmNotes[rhythmNotes.length - 1].time;
+    $('progressBar').style.width = Math.min(100, now / lastT * 100) + '%';
+    if (allDone && now > lastT + 1) { finishSong(); }
+  }
+
+  renderer.render(scene, camera);
+}
+
+function resize() {
+  const w = window.innerWidth, h = window.innerHeight;
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  // 根据宽高比计算相机距离，保证整个键盘（含边距）水平方向完整可见
+  const fitW = N_WHITE * WHITE_W + 2.5;
+  const vHalf = THREE.MathUtils.degToRad(camera.fov / 2);
+  const hHalf = Math.atan(Math.tan(vHalf) * camera.aspect);
+  const dist = Math.max(15, (fitW / 2) / Math.tan(hHalf));
+  const target = new THREE.Vector3(0, 0.5, -2);
+  const dir = new THREE.Vector3(0, 0.62, 1).normalize();
+  camera.position.copy(target).addScaledVector(dir, dist);
+  camera.lookAt(target);
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+resize();
+animate();
+</script>
+</body>
+</html>
